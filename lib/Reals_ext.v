@@ -410,14 +410,14 @@ End Prob.
 Export Prob.Exports.
 Coercion Prob.p : prob >-> R. *)
 
-Definition prob := (prob real_realType).
-Definition prob_coercion : prob -> R := @Prob.p real_realType.
+(*Definition prob := prob real_realType.*)
+(*Definition prob_coercion : @prob [realType of R] -> R := @Prob.p real_realType.
 Coercion prob_coercion : prob >-> R.
 
 #[global] Hint Extern 0 (Rle (IZR Z0) _) =>
   solve [apply/RleP/prob_ge0] : core.
 #[global] Hint Extern 0 (Rle _ (IZR (Zpos xH))) =>
-  solve [apply/RleP/prob_le1] : core.
+  solve [apply/RleP/prob_le1] : core.*)
 
 (*Lemma probpK p H : Prob.p (@Prob.mk p H) = p. Proof. by []. Qed.
 
@@ -437,8 +437,18 @@ Lemma prob_le1 (p : prob) : p <= 1.
 Proof. by case: p => p /= /leR2P[]. Qed.
 Global Hint Resolve prob_le1 : core.*)
 
+Reserved Notation "{ 'prob' T }" (at level 0, format "{ 'prob'  T }").
+Definition prob_of (R : realType) := fun phT : phant (Num.NumDomain.sort (*Real.sort*)R) => @prob R.
+Notation "{ 'prob' T }" := (@prob_of _ (Phant T)).
+Definition prob_coercion (p : {prob R}) : R := Prob.p p.
+Coercion prob_coercion : prob_of >-> R.
+Lemma probR_ge0 (p : {prob R}) : 0 <= p. Proof. exact/RleP/prob_ge0. Qed.
+Lemma probR_le1 (p : {prob R}) : p <= 1. Proof. exact/RleP/prob_le1. Qed.
+#[global] Hint Extern 0 (Rle (IZR Z0) _) => solve [exact/probR_ge0] : core.
+#[global] Hint Extern 0 (Rle _ (IZR (Zpos xH))) => solve [exact/probR_le1] : core.
+
 Section prob_lemmas.
-Implicit Types p q : prob.
+Implicit Types p q : {prob R}.
 
 Lemma prob_gt0 p : p != 0%:pr <-> 0 < p.
 Proof.
@@ -468,63 +478,78 @@ have [/eqP ->|pneq1] := boolP (p == 1%:pr); first by left.
 by right; split; [apply prob_gt0 | apply prob_lt1].
 Qed.
 
-Lemma probK p : p = ((prob_coercion p).~).~%:pr.
+Lemma probK p : p = (onem p).~%:pr.
 Proof. by apply val_inj => /=; rewrite onemK. Qed.
 
-Lemma probKC (p : prob) : p + (prob_coercion p).~ = 1 :> R.
+Lemma probKC (p : {prob R}) : p + p.~ = 1 :> R.
 Proof. exact: onemKC. Qed.
 
-Lemma probadd_eq0 p q : p + q = prob_coercion 0%:pr <-> p = 0%:pr /\ q = 0%:pr.
+Lemma probadd_eq0 p q : p + q = 0 <-> p = 0%:pr /\ q = 0%:pr.
 Proof.
 split => [/paddR_eq0 | ].
-- move=> /(_ _)[] // /val_inj-> /val_inj->.
+- by move=> /(_ _)[] // p0 q0; split; exact/val_inj.
 - by case => -> ->; rewrite addR0.
 Qed.
 
-Lemma probadd_neq0 p q : p + q != 0%:pr <-> p != 0%:pr \/ q != 0%:pr.
+Lemma probadd_neq0 p q : p + q != 0 <-> p != 0%:pr \/ q != 0%:pr.
 Proof.
 split => [/paddR_neq0| ]; first by move=> /(_ _ _); apply.
 by case; apply: contra => /eqP/probadd_eq0 [] /eqP ? /eqP.
 Qed.
 
-Lemma probmul_eq1 p q : p * q = 1%:pr <-> p = 1%:pr /\ q = 1%:pr.
+Lemma probmul_eq1 p q : p * q = 1 <-> p = 1%:pr /\ q = 1%:pr.
 Proof.
 split => [/= pq1|[-> ->]]; last by rewrite mulR1.
 move: R1_neq_R0; rewrite -{1}pq1 => /eqP; rewrite mulR_neq0' => /andP[].
 rewrite 2!prob_gt0'=> p0 q0.
-have /leR_eqVlt[p1|] := prob_le1 p; last first.
+have /leR_eqVlt[p1|] := probR_le1 p; last first.
   by move/(ltR_pmul2r q0); rewrite mul1R => /(ltR_leR_trans);
-     move/(_ _ (prob_le1 q))/ltR_neqAle => [].
-have /leR_eqVlt[q1|] := prob_le1 q; last first.
+     move/(_ _ (probR_le1 q))/ltR_neqAle => [].
+have /leR_eqVlt[q1|] := probR_le1 q; last first.
   by move/(ltR_pmul2r p0); rewrite mul1R mulRC => /(ltR_leR_trans);
-  move/(_ _ (prob_le1 p)) /ltR_neqAle => [].
+  move/(_ _ (probR_le1 p)) /ltR_neqAle => [].
 by split; apply val_inj.
 Qed.
 
 End prob_lemmas.
 
-Lemma prob_IZR (p : positive) : R0 <b= / IZR (Zpos p) <b= R1.
+Lemma prob_IZR (p : positive) : (0 <= / IZR (Zpos p) <= 1)%R.
 Proof.
-apply/leR2P; split; first exact/Rlt_le/Rinv_0_lt_compat/IZR_lt/Pos2Z.is_pos.
+split; first exact/Rlt_le/Rinv_0_lt_compat/IZR_lt/Pos2Z.is_pos.
 rewrite -[X in (_ <= X)%R]Rinv_1; apply Rle_Rinv => //.
 - exact/IZR_lt/Pos2Z.is_pos.
 - exact/IZR_le/Pos2Z.pos_le_pos/Pos.le_1_l.
 Qed.
 
-Canonical probIZR (p : positive) := Eval hnf in Prob.mk (prob_IZR p).
+(* TODO *)
+Lemma prob_IZR' (p : positive) : (@Order.le _ _ 0%R (/ IZR (Zpos p)) && @Order.le _ _ (/ IZR (Zpos p)) 1)%R.
+Proof.
+have [/RleP ? /RleP ?] := prob_IZR p.
+exact/andP.
+Qed.
+
+Canonical probIZR (p : positive) := Eval hnf in Prob.mk (prob_IZR' p).
 
 Definition divRnnm n m := INR n / INR (n + m).
 
-Lemma prob_divRnnm n m : R0 <b= divRnnm n m <b= R1.
+Lemma prob_divRnnm n m : R0 <= divRnnm n m <= R1.
 Proof.
-apply/leR2P; rewrite /divRnnm.
-have [/eqP ->|n0] := boolP (n == O); first by rewrite div0R; apply/leR2P/OO1.
+rewrite /divRnnm.
+have [/eqP ->|n0] := boolP (n == O).
+  rewrite div0R.
+  by have /leR2P:= (@OO1 real_realType).
 split; first by apply divR_ge0; [exact: leR0n | rewrite ltR0n addn_gt0 lt0n n0].
 by rewrite leR_pdivr_mulr ?mul1R ?leR_nat ?leq_addr // ltR0n addn_gt0 lt0n n0.
 Qed.
 
+Lemma prob_divRnnm' n m : (@Order.le _ _ R0 (divRnnm n m) && @Order.le _ _ (divRnnm n m) R1)%R.
+Proof.
+have [/RleP ? /RleP ?] := prob_divRnnm n m.
+exact/andP.
+Qed.
+
 Canonical probdivRnnm (n m : nat) :=
-  Eval hnf in @Prob.mk (divRnnm n m) (prob_divRnnm n m).
+  Eval hnf in @Prob.mk _ (divRnnm n m) (prob_divRnnm' n m).
 
 Lemma prob_invn (m : nat) : (R0 <b= / (1 + m)%:R <b= R1)%R.
 Proof.
@@ -1069,3 +1094,4 @@ rewrite (addRC p (q + r)) addRK {4}[in q + r]addRC addRK.
 rewrite mulRC -mulRBr (addRC _ p) addRA addRK mulR_neq0.
 split; exact/eqP/Rpos_neq0.
 Qed.
+
