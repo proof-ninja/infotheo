@@ -1,11 +1,11 @@
 (* infotheo: information theory and error-correcting codes in Coq             *)
 (* Copyright (C) 2020 infotheo authors, license: LGPL-2.1-or-later            *)
 From mathcomp Require Import all_ssreflect ssrnum ssralg.
+From mathcomp Require Import all_algebra vector reals normedtype ssrnum.
+From mathcomp Require Import boolp.
 From mathcomp Require Import Rstruct.
-From mathcomp Require boolp.
-Require Import Reals Lra.
 Require Import ssrR realType_ext.
-
+Require Import Reals Lra.
 
 (******************************************************************************)
 (*              Additional lemmas and definitions about Coq reals             *)
@@ -325,7 +325,7 @@ suff : Hf = Hg by move=> ->.
 exact/boolp.Prop_irrelevance.
 Qed.
 
-Section onem.
+(*Section onem.
 Implicit Types r s p q : R.
 
 Definition onem r := 1 - r.
@@ -390,6 +390,7 @@ Proof. by rewrite /onem -addR_opp oppRB addRA. Qed.
 End onem.
 
 Notation "p '.~'" := (onem p) : reals_ext_scope.
+*)
 
 (*Module Prob.
 Record t := mk {
@@ -410,6 +411,13 @@ Export Prob.Exports.
 Coercion Prob.p : prob >-> R. *)
 
 Definition prob := (prob real_realType).
+Definition prob_coercion : prob -> R := @Prob.p real_realType.
+Coercion prob_coercion : prob >-> R.
+
+#[global] Hint Extern 0 (Rle (IZR Z0) _) =>
+  solve [apply/RleP/prob_ge0] : core.
+#[global] Hint Extern 0 (Rle _ (IZR (Zpos xH))) =>
+  solve [apply/RleP/prob_le1] : core.
 
 (*Lemma probpK p H : Prob.p (@Prob.mk p H) = p. Proof. by []. Qed.
 
@@ -431,14 +439,11 @@ Global Hint Resolve prob_le1 : core.*)
 
 Section prob_lemmas.
 Implicit Types p q : prob.
-Local Open Scope R_scope.
-Lemma prob_gt0 p : p !=
-(@Prob.mk _ (0:R) (@Prob.O1 real_realType _)) <-> 0 < p.
 
- (0)%:pr <-> 0 < p.
+Lemma prob_gt0 p : p != 0%:pr <-> 0 < p.
 Proof.
 rewrite ltR_neqAle; split=> [H|[/eqP p0 _]].
-split => //; exact/nesym/eqP.
+by split => //; exact/nesym/eqP.
 by case: p p0 => p ?; apply: contra => /eqP[/= ->].
 Qed.
 
@@ -463,16 +468,16 @@ have [/eqP ->|pneq1] := boolP (p == 1%:pr); first by left.
 by right; split; [apply prob_gt0 | apply prob_lt1].
 Qed.
 
-Lemma probK p : p = (p.~).~%:pr.
+Lemma probK p : p = ((prob_coercion p).~).~%:pr.
 Proof. by apply val_inj => /=; rewrite onemK. Qed.
 
-Lemma probKC (p : prob) : p + p.~ = 1 :> R.
-Proof. by rewrite onemKC. Qed.
+Lemma probKC (p : prob) : p + (prob_coercion p).~ = 1 :> R.
+Proof. exact: onemKC. Qed.
 
-Lemma probadd_eq0 p q : p + q = 0%:pr <-> p = 0%:pr /\ q = 0%:pr.
+Lemma probadd_eq0 p q : p + q = prob_coercion 0%:pr <-> p = 0%:pr /\ q = 0%:pr.
 Proof.
 split => [/paddR_eq0 | ].
-- by move=> /(_ _)[] // /val_inj-> /val_inj->.
+- move=> /(_ _)[] // /val_inj-> /val_inj->.
 - by case => -> ->; rewrite addR0.
 Qed.
 
