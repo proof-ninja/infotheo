@@ -20,30 +20,33 @@ Import Order.POrderTheory Order.TotalTheory GRing.Theory Num.Theory.
 
 (* ---- onem ---- *)
 Section onem.
-  Local Open Scope ring_scope.
-  Variable R : realType.
-  Definition onem (x: R) := 1 - x.
-  Local Notation "p '.~'" := (onem p).
+Local Open Scope ring_scope.
+Variable R : realType.
 
-  Lemma onem0 : onem 0 = 1.
-  Proof. by rewrite /onem subr0. Qed.
+Definition onem (x: R) := 1 - x.
+Local Notation "p '.~'" := (onem p).
 
-  Lemma onem1 : onem 1 = 0.
-  Proof. by rewrite /onem subrr. Qed.
+Lemma onem0 : onem 0 = 1. Proof. by rewrite /onem subr0. Qed.
 
-  Lemma onem_ge0 x : x <= 1 -> 0 <= onem x.
-  Proof. move=> ?; by rewrite /onem subr_ge0. Qed.
-  Lemma onem_le1 x : 0 <= x -> onem x <= 1.
-  Proof. move=> ?; by rewrite /onem ler_subl_addr -ler_subl_addl subrr. Qed.
+Lemma onem1 : onem 1 = 0.   Proof. by rewrite /onem subrr. Qed.
 
-  Lemma onem_le  r s : (r <= s) = (s.~ <= r.~).
-  Proof. Admitted.
+Lemma onem_ge0 x : x <= 1 -> 0 <= onem x.
+Proof. move=> ?; by rewrite /onem subr_ge0. Qed.
 
-  Lemma onemE x : x.~ = 1 - x.  Proof. by []. Qed.
+Lemma onem_le1 x : 0 <= x -> onem x <= 1.
+Proof. move=> ?; by rewrite /onem ler_subl_addr -ler_subl_addl subrr. Qed.
 
-  Lemma onem_lt  r s : r < s <-> s.~ < r.~. Proof. by rewrite !onemE; lra. Qed.
+Lemma onem_le  r s : (r <= s) = (s.~ <= r.~).
+Proof.
+apply/idP/idP => [|?]; first exact: ler_sub.
+by rewrite -(opprK r) ler_oppl -(ler_add2l 1).
+Qed.
 
-  Lemma onemKC r : r + r.~ = 1. Proof. by rewrite !onemE; lra. Qed.
+Lemma onemE x : x.~ = 1 - x.  Proof. by []. Qed.
+
+Lemma onem_lt  r s : r < s <-> s.~ < r.~. Proof. by rewrite !onemE; lra. Qed.
+
+Lemma onemKC r : r + r.~ = 1. Proof. by rewrite !onemE; lra. Qed.
 (*  Lemma onemKC r : r + (onem r) = 1.
   Proof. 
     by rewrite /onem addrC -addrA (addrC (-r) r) subrr addr0.
@@ -150,26 +153,22 @@ Proof. by case: p => p /= /andP []. Qed.
 Lemma prob_le1 (p : prob R) : ((p : R) <= 1)%R.
 Proof. by case: p => p /= /andP []. Qed.
 
-
-
 Lemma prob_gt0 p : p != 0%:pr <-> 0 < Prob.p p.
 Proof.
-(*rewrite ltr_neqAle; split=> [H|[/eqP p0 _]].
-by split => //; exact/nesym/eqP.
-by case: p p0 => p ?; apply: contra => /eqP[/= ->].
-Qed.*)
-Admitted.
+rewrite lt_neqAle; split=> [H|/andP[+ pge0]].
+  by apply/andP; split; [rewrite eq_sym|exact: prob_ge0].
+by apply: contra => /eqP ->.
+Qed.
 
 Lemma prob_gt0' p : p != 0 :> R <-> 0 < Prob.p p.
 Proof. exact: prob_gt0. Qed.
 
 Lemma prob_lt1 p : p != 1%:pr <-> Prob.p p < 1.
 Proof.
-(*rewrite ltR_neqAle; split=> [H|[/eqP p1 _]].
-by split => //; exact/eqP.
-by case: p p1 => p ?; apply: contra => /eqP[/= ->].
-Qed.*)
-Admitted.
+rewrite lt_neqAle; split=> [H|/andP[+ pge0]].
+  by apply/andP; split => //; exact: prob_le1.
+by apply: contra => /eqP ->.
+Qed.
 
 Lemma prob_lt1' p : p != 1 :> R <-> Prob.p p < 1.
 Proof. exact: prob_lt1. Qed.
@@ -179,9 +178,8 @@ Proof.
 have [/eqP ->|pneq0]:= boolP (p == 0%:pr); first by left.
 right.
 have [/eqP ->|pneq1] := boolP (p == 1%:pr); first by left.
-(*by right; split; [apply prob_gt0 | apply prob_lt1].
-Qed.*)
-Admitted.
+by right; apply/andP; split; [exact/prob_gt0|exact/prob_lt1].
+Qed.
 
 Lemma probK p : p = (onem p).~%:pr.
 Proof. by apply val_inj => /=; rewrite onemK. Qed.
@@ -191,18 +189,18 @@ Proof. exact: onemKC. Qed.
 
 Lemma probadd_eq0 p q : Prob.p p + Prob.p q = 0 <-> p = 0%:pr /\ q = 0%:pr.
 Proof.
-(*split => [/paddR_eq0 | ].
-- by move=> /(_ _)[] // p0 q0; split; exact/val_inj.
-- by case => -> ->; rewrite addR0.
-Qed.*)
-Admitted.
+split; last by move=> [-> ->] /=; rewrite addr0.
+move/eqP; rewrite paddr_eq0; [|exact: prob_ge0|exact: prob_ge0].
+by move=> /andP[/eqP ? /eqP ?]; split; exact/val_inj.
+Qed.
 
 Lemma probadd_neq0 p q : Prob.p p + Prob.p q != 0 <-> p != 0%:pr \/ q != 0%:pr.
 Proof.
-(*split => [/paddR_neq0| ]; first by move=> /(_ _ _); apply.
-by case; apply: contra => /eqP/probadd_eq0 [] /eqP ? /eqP.
-Qed.*)
-Admitted.
+apply/iff_not2; split=> [/negP/negPn/eqP/probadd_eq0[-> ->]|].
+  by apply/not_orP; split; apply/negP/negPn.
+move=> /not_orP[/negP/negPn/eqP -> /negP/negPn/eqP -> /=]; apply/negP/negPn.
+by rewrite addr0.
+Qed.
 
 Lemma probmul_eq1 p q : Prob.p p * Prob.p q = 1 <-> p = 1%:pr /\ q = 1%:pr.
 Proof.
@@ -308,4 +306,3 @@ Proof. by move: (oprobadd_gt0 p q); rewrite ltR_neqAle => -[] /nesym /eqP. Qed.
 Qed.*)
 
 End oprob_lemmas.
-
