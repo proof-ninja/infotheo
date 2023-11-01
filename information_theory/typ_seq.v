@@ -131,11 +131,11 @@ rewrite Pr_to_cplt leR_add2l leR_oppl oppRK.
 have -> : Pr P `^ n.+1 (~: p) =
   Pr P `^ n.+1 [set x | P `^ n.+1 x == 0] +
   Pr P `^ n.+1 [set x | (0 < P `^ n.+1 x)%mcR &&
-                (`| - (1 / n.+1%:R) * log (P `^ n.+1 x) - `H P | >b epsilon)].
+                (`| - (1 / n.+1%:R) * log (P `^ n.+1 x) - `H P | > epsilon)%mcR].
   have -> : ~: p =
     [set x | P `^ n.+1 x == 0 ] :|:
     [set x | (0 < P `^ n.+1 x)%mcR &&
-             (`| - (1 / n.+1%:R) * log (P `^ n.+1 x) - `H P | >b epsilon)].
+             (`| - (1 / n.+1%:R) * log (P `^ n.+1 x) - `H P | > epsilon)%mcR].
     apply/setP => /= i; rewrite !inE negb_and orbC.
     apply/idP/idP => [/orP[/RltP|]|].
     - move/RltP => H.
@@ -152,8 +152,11 @@ have -> : Pr P `^ n.+1 (~: p) =
         apply/andP; split; first exact/RltP.
         move: LHS; rewrite -ltRNge' => /ltRP/(@Log_increasing 2 _ _ Rlt_1_2 H1).
         rewrite /exp2 ExpK // mulRC mulRN -mulNR -ltR_pdivr_mulr; last exact/ltR0n.
-        rewrite /Rdiv mulRC ltR_oppr => /ltRP; rewrite mulNR -ltR_subRL' => LHS.
-        rewrite mul1R geR0_norm //; by move/ltRP : LHS; move/(ltR_trans He)/ltRW.
+        rewrite /Rdiv mulRC ltR_oppr => /RltP; rewrite -Num.Theory.ltrBrDl => LHS.
+        rewrite GRing.div1r// GRing.mulNr -RinvE//; last first.
+          by rewrite gt_eqF// Num.Theory.ltr0n.
+        rewrite Num.Theory.ger0_norm// -INRE//.
+        by move/RltP : LHS; move/(ltR_trans He)/ltRW/RleP.
       + move: LHS; rewrite leNgt negbK => LHS.
         apply/orP; right; apply/andP; split.
           apply/(lt_trans _ LHS).
@@ -165,13 +168,18 @@ have -> : Pr P `^ n.+1 (~: p) =
         rewrite oppRD oppRK => LHS.
         have H2 : forall a b c, - a + b < c -> - c - a < - b by move=> *; lra.
         move/H2 in LHS.
-        rewrite div1R mulRC mulRN -/(Rdiv _ _) leR0_norm.
-        * by apply/ltRP; rewrite ltR_oppr.
-        * by apply: (leR_trans (ltRW LHS)); lra.
+        rewrite GRing.div1r GRing.mulrC GRing.mulrN Num.Theory.ler0_norm//.
+        * rewrite Num.Theory.ltr_oppr//; apply/RltP; rewrite -RminusE -RoppE.
+          by rewrite -RdivE ?gt_eqF// ?Num.Theory.ltr0n// -INRE.
+        * apply/RleP; rewrite -RminusE -RoppE.
+          rewrite -RdivE ?gt_eqF// ?Num.Theory.ltr0n// -INRE//.
+          apply: (leR_trans (ltRW LHS)).
+          apply/RleP.
+          by rewrite Num.Theory.lerNl GRing.oppr0// ltW//; apply/RltP.
     - rewrite -negb_and; apply: contraTN.
       rewrite negb_or /typ_seq => /andP[H1 /andP[/leRP H2 /leRP H3]].
       apply/andP; split; first exact/gtR_eqF/RltP.
-      rewrite negb_and H1 /= -leRNgt'.
+      rewrite negb_and H1 /= -leNgt.
       move/(@Log_increasing_le 2 _ _ Rlt_1_2 (exp2_gt0 _)) : H2.
       rewrite /exp2 ExpK // mulRC mulRN -mulNR -leR_pdivl_mulr ?oppRD; last exact/ltR0n.
       move => H2.
@@ -181,19 +189,22 @@ have -> : Pr P `^ n.+1 (~: p) =
       move/(@Log_increasing_le 2 _ _ Rlt_1_2 H1) : H3.
       rewrite /exp2 ExpK //.
       rewrite mulRC mulRN -mulNR -leR_pdivr_mulr; last exact/ltR0n.
-      rewrite oppRD oppRK div1R mulRC mulRN => H3.
+      rewrite oppRD oppRK GRing.div1r GRing.mulrC GRing.mulrN => H3.
       have /(_ _ _ _ H3) {}H3 : forall a b c, a <= - c + b -> - b <= - a - c.
         by move=> *; lra.
       apply/leRP/RleP.
-      rewrite leR_Rabsl; apply/andP; split; exact/leRP.
+      by rewrite leR_Rabsl; apply/andP; split;
+        apply/RleP; rewrite -RminusE -RoppE;
+        rewrite -RdivE ?gt_eqF// ?Num.Theory.ltr0n// -INRE//.
   rewrite Pr_union_disj // disjoints_subset; apply/subsetP => /= i.
   rewrite !inE /= => /eqP Hi; by rewrite negb_and Hi ltxx.
 rewrite {1}/Pr (eq_bigr (fun=> 0)); last by move=> /= v; rewrite inE => /eqP.
 rewrite big_const iter_addR mulR0 add0R.
 apply/(leR_trans _ (aep He k0_k))/Pr_incl/subsetP => /= t.
 rewrite !inE /= => /andP[-> H3].
-apply/ltRW'.
-by rewrite /log_RV /= /scalel_RV /= mulRN -mulNR.
+rewrite /log_RV /= /scalel_RV /= mulRN -mulNR.
+apply/ltW.
+by rewrite RmultE RoppE// RdivE// ?gt_eqF// ?INRE// ?Num.Theory.ltr0n//.
 Qed.
 
 Variable He1 : epsilon < 1.

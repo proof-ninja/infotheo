@@ -773,7 +773,7 @@ Notation "P '`<<b' Q" := (dominatesb Q P) : reals_ext_scope.
 Module Rpos.
 Record t := mk {
   v : R ;
-  H : v >b 0 }.
+  H : (v > 0)%mcR }.
 Definition K (r : t) := H r.
 Arguments K : simpl never.
 Module Exports.
@@ -793,23 +793,23 @@ Canonical Rpos_choiceType := Eval hnf in ChoiceType Rpos Rpos_choiceMixin.
 Definition rpos_coercion (p : Rpos) : Real.sort real_realType := Rpos.v p.
 Coercion rpos_coercion : Rpos >-> Real.sort.
 
-Definition mkRpos x H := @Rpos.mk x (introT (ltRP _ _) H).
+Definition mkRpos x H := @Rpos.mk x (introT (RltP _ _) H).
 
 Canonical Rpos1 := @mkRpos 1 Rlt_0_1.
 
-Lemma Rpos_gt0 (x : Rpos) : 0 < x. Proof. by case: x => p /= /ltRP. Qed.
+Lemma Rpos_gt0 (x : Rpos) : 0 < x. Proof. by case: x => p /= /RltP. Qed.
 Global Hint Resolve Rpos_gt0 : core.
 
 Lemma Rpos_neq0 (x : Rpos) : val x != 0.
-Proof. by case: x => p /=; rewrite /gtRb lt0R => /andP[]. Qed.
+Proof. by case: x => p /=; rewrite /RltP Num.Theory.lt0r => /andP[]. Qed.
 
-Lemma addRpos_gt0 (x y : Rpos) : x + y >b 0. Proof. exact/ltRP/addR_gt0. Qed.
+Lemma addRpos_gt0 (x y : Rpos) : ((x + y)%coqR > 0)%mcR. Proof. exact/RltP/addR_gt0. Qed.
 Canonical addRpos x y := Rpos.mk (addRpos_gt0 x y).
 
-Lemma mulRpos_gt0 (x y : Rpos) : x * y >b 0. Proof. exact/ltRP/mulR_gt0. Qed.
+Lemma mulRpos_gt0 (x y : Rpos) : ((x * y)%coqR > 0)%mcR. Proof. exact/RltP/mulR_gt0. Qed.
 Canonical mulRpos x y := Rpos.mk (mulRpos_gt0 x y).
 
-Lemma divRpos_gt0 (x y : Rpos) : x / y >b 0. Proof. exact/ltRP/divR_gt0. Qed.
+Lemma divRpos_gt0 (x y : Rpos) : (((x : R) / (y : R))%coqR > 0)%mcR. Proof. exact/RltP/divR_gt0. Qed.
 Canonical divRpos x y := Rpos.mk (divRpos_gt0 x y).
 
 (* TODO: Canonical oprob_Rpos (p : oprob) := @mkRpos p (oprob_gt0 p). *)
@@ -817,7 +817,7 @@ Canonical divRpos x y := Rpos.mk (divRpos_gt0 x y).
 Lemma oprob_divRposxxy (x y : Rpos) : (0 < x / (x + y) < 1)%coqR.
 Proof.
 split; first by apply/divR_gt0.
-rewrite ltR_pdivr_mulr ?mul1R; last exact/ltRP/addRpos_gt0.
+rewrite ltR_pdivr_mulr ?mul1R; last exact/RltP/addRpos_gt0.
 by rewrite ltR_addl.
 Qed.
 
